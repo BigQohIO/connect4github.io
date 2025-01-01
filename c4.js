@@ -3,7 +3,7 @@ let currentPlayer = 'red';  // Red starts
 let board = Array(6).fill().map(() => Array(7).fill(null));  // Create a 6x7 grid
 let gameOver = false;
 let isAI = false;  // Determines if the current game is against AI
-let difficulty = 'easy';  // Default difficulty
+let difficulty = 'hard';  // Default difficulty set to 'hard'
 
 // Create the board on the screen
 function createBoard() {
@@ -28,7 +28,7 @@ function handleCellClick(event) {
 
     const col = event.target.dataset.col;
     const row = getAvailableRow(col);
-    
+
     if (row !== -1) {
         // Place the disc
         board[row][col] = currentPlayer;
@@ -69,7 +69,7 @@ function updateBoard() {
         const row = cell.dataset.row;
         const col = cell.dataset.col;
         const player = board[row][col];
-        
+
         if (player) {
             cell.classList.add(player);
         } else {
@@ -81,15 +81,15 @@ function updateBoard() {
 // Check if the current move is a winning move
 function checkWin(row, col) {
     return checkDirection(row, col, 1, 0) ||  // Horizontal
-           checkDirection(row, col, 0, 1) ||  // Vertical
-           checkDirection(row, col, 1, 1) ||  // Diagonal \
-           checkDirection(row, col, 1, -1);   // Diagonal /
+        checkDirection(row, col, 0, 1) ||  // Vertical
+        checkDirection(row, col, 1, 1) ||  // Diagonal \
+        checkDirection(row, col, 1, -1);   // Diagonal /
 }
 
 // Check a specific direction for a win
 function checkDirection(row, col, rowDir, colDir) {
     let count = 1;
-    
+
     // Check in both directions (positive and negative)
     for (let i = 1; i <= 3; i++) {
         const r = row + i * rowDir;
@@ -130,23 +130,19 @@ function aiMove() {
 
         let aiCol = null;
 
-        // Easy AI: Random column
+        // AI logic based on difficulty
         if (difficulty === 'easy') {
             aiCol = availableColumns[Math.floor(Math.random() * availableColumns.length)];
         }
-
-        // Medium AI: Try to block if necessary
         else if (difficulty === 'medium') {
             aiCol = mediumAI(availableColumns);
         }
-
-        // Hard AI: Block the player from winning and try to win
         else if (difficulty === 'hard') {
             aiCol = hardAI(availableColumns);
         }
 
         const row = getAvailableRow(aiCol);
-        board[row][aiCol] = 'yellow';
+        board[row][aiCol] = 'yellow';  // AI places its piece (yellow)
         updateBoard();
 
         if (checkWin(row, aiCol)) {
@@ -167,12 +163,12 @@ function mediumAI(availableColumns) {
     for (let col of availableColumns) {
         const row = getAvailableRow(col);
         if (row !== -1) {
-            board[row][col] = 'red';
+            board[row][col] = 'red';  // Temporarily simulate player move
             if (checkWin(row, col)) {
-                board[row][col] = null;
+                board[row][col] = null;  // Undo if it would win for player
                 return col;
             }
-            board[row][col] = null;
+            board[row][col] = null;  // Undo the simulated move
         }
     }
     return availableColumns[Math.floor(Math.random() * availableColumns.length)];
@@ -180,32 +176,47 @@ function mediumAI(availableColumns) {
 
 // Hard AI: Blocks the player from winning and tries to win
 function hardAI(availableColumns) {
-    for (let col of availableColumns) {
-        const row = getAvailableRow(col);
-        if (row !== -1) {
-            board[row][col] = 'yellow';
-            if (checkWin(row, col)) {
-                return col;
-            }
-            board[row][col] = null;
-        }
-    }
+    let aiCol = null;
 
-    // Block the player's winning move
+    // First, check if the AI can win
     for (let col of availableColumns) {
         const row = getAvailableRow(col);
         if (row !== -1) {
-            board[row][col] = 'red';
+            board[row][col] = 'yellow';  // Temporarily simulate AI move
             if (checkWin(row, col)) {
+                aiCol = col;
                 board[row][col] = null;
-                return col;
+                return aiCol;  // AI wins
             }
-            board[row][col] = null;
+            board[row][col] = null;  // Undo if not a winning move
         }
     }
 
-    // Pick random move if no immediate threat
-    return availableColumns[Math.floor(Math.random() * availableColumns.length)];
+    // Block player's winning move
+    for (let col of availableColumns) {
+        const row = getAvailableRow(col);
+        if (row !== -1) {
+            board[row][col] = 'red';  // Temporarily simulate player move
+            if (checkWin(row, col)) {
+                aiCol = col;
+                board[row][col] = null;
+                return aiCol;  // Block player's win
+            }
+            board[row][col] = null;  // Undo
+        }
+    }
+
+    // If no immediate winning or blocking move, take the center column if available
+    if (availableColumns.includes(3)) {
+        aiCol = 3;
+    }
+
+    // If center is unavailable, pick a random move
+    if (aiCol === null) {
+        aiCol = availableColumns[Math.floor(Math.random() * availableColumns.length)];
+    }
+
+    return aiCol;
 }
 
 // Restart the game
